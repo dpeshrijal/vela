@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { appConfig } from "../app/config.js";
 import type { ReasoningLogEntry } from "../audit/reasoningLog.types.js";
 import { createMcpServer } from "../mcp/mcpServer.js";

@@ -42,6 +42,7 @@ x-agent-token: demo_agent_token
 - MCP tool: `vela_audit_get_reasoning`
 - Mock customer agent
 - Mock KYC vendor
+- Didit sandbox KYC vendor adapter
 - Simple policy engine
 - In-memory reasoning/audit log
 
@@ -49,7 +50,7 @@ x-agent-token: demo_agent_token
 
 This POC intentionally does not include:
 
-- Real KYC vendors
+- Production KYC vendor handling
 - Real sanctions or wallet screening
 - Travel Rule
 - Liquidity
@@ -68,6 +69,35 @@ npm install
 npm run build
 npm run demo
 ```
+
+## KYC Vendor Selection
+
+The KYC adapter is selected with `KYC_VENDOR`.
+
+Use the mock vendor:
+
+```bash
+KYC_VENDOR=mock npm run demo
+```
+
+Use the Didit sandbox vendor:
+
+```bash
+KYC_VENDOR=didit npm run demo
+```
+
+Required Didit environment variables:
+
+```text
+DIDIT_BASE_URL=https://verification.didit.me
+DIDIT_API_KEY=your_didit_api_key
+DIDIT_WORKFLOW_ID=your_didit_workflow_id
+KYC_VENDOR=didit
+```
+
+`DIDIT_APP_ID` may be present in local environments, but the current Didit session API call does not require it.
+
+The Didit adapter currently creates a hosted verification session and returns a `review` / `manual_review` result with the Didit session ID, vendor status, and verification URL when returned by Didit. Final approval/rejection handling, webhooks, and polling are intentionally not implemented yet.
 
 ## Run The MCP Server
 

@@ -22,6 +22,10 @@ export interface NormalizedIdentityVendorResult {
   risk_score: number;
   vendor_reference_id: string;
   reasons: string[];
+  vendor_session_id?: string;
+  verification_url?: string;
+  vendor_status?: string;
+  raw_response_summary?: Record<string, unknown>;
 }
 
 export interface VerifyIdentityResponse {
@@ -30,4 +34,7 @@ export interface VerifyIdentityResponse {
   risk_score: number;
   policy_result: "allowed" | "manual_review" | "blocked";
   reasoning_log_id: string;
+  vendor_session_id?: string;
+  verification_url?: string;
+  vendor_status?: string;
 }

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { appConfig } from "../app/config.js";
@@ -86,7 +87,11 @@ function parseTextJson<T>(toolResult: unknown): T {
     throw new Error("MCP tool response did not include text JSON content");
   }
 
-  return JSON.parse(firstContent.text) as T;
+  try {
+    return JSON.parse(firstContent.text) as T;
+  } catch {
+    throw new Error(`MCP tool returned non-JSON text: ${firstContent.text}`);
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

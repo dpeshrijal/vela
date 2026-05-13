@@ -2,7 +2,8 @@ import { saveReasoningLog } from "../../audit/reasoningLog.service.js";
 import { authenticateAgent } from "../../auth/authenticateAgent.js";
 import { VelaError } from "../../common/errors.js";
 import { evaluatePolicy } from "../../policy/policyEngine.js";
-import { mockKycVendor } from "../../vendors/kyc/mockKycVendor.adapter.js";
+import type { VendorKycResult } from "../../vendors/common/vendorResult.types.js";
+import { getKycVendor } from "../../vendors/kyc/kycVendor.selector.js";
 import type {
   IdentityVerificationResult,
   NormalizedIdentityVendorResult,
@@ -15,7 +16,8 @@ export async function verifyIdentity(command: VerifyIdentityCommand): Promise<Ve
     throw new VelaError("Invalid demo agent token");
   }
 
-  const vendorResult = await mockKycVendor.verifyIdentity(command.payload);
+  const kycVendor = getKycVendor();
+  const vendorResult = await kycVendor.verifyIdentity(command.payload);
   const normalizedVendorResult = normalizeVendorResult(vendorResult);
   const policyEvaluation = evaluatePolicy(normalizedVendorResult);
 
@@ -24,7 +26,7 @@ export async function verifyIdentity(command: VerifyIdentityCommand): Promise<Ve
     agent_id: "demo_customer_agent",
     external_user_id: command.payload.external_user_id,
     jurisdiction: command.payload.jurisdiction,
-    vendor_used: mockKycVendor.name,
+    vendor_used: kycVendor.name,
     vendor_result: vendorResult,
     normalized_result: normalizedVendorResult,
     risk_score: normalizedVendorResult.risk_score,
@@ -38,16 +40,14 @@ export async function verifyIdentity(command: VerifyIdentityCommand): Promise<Ve
     result: normalizedVendorResult.result,
     risk_score: normalizedVendorResult.risk_score,
     policy_result: policyEvaluation.policy_result,
-    reasoning_log_id
+    reasoning_log_id,
+    vendor_session_id: normalizedVendorResult.vendor_session_id,
+    verification_url: normalizedVendorResult.verification_url,
+    vendor_status: normalizedVendorResult.vendor_status
   };
 }
 
-function normalizeVendorResult(vendorResult: {
-  vendor_reference_id: string;
-  decision: "pass" | "review" | "fail";
-  risk_score: number;
-  reasons: string[];
-}): NormalizedIdentityVendorResult {
+function normalizeVendorResult(vendorResult: VendorKycResult): NormalizedIdentityVendorResult {
   const resultByDecision: Record<typeof vendorResult.decision, IdentityVerificationResult> = {
     pass: "approved",
     review: "review",
@@ -59,6 +59,10 @@ function normalizeVendorResult(vendorResult: {
     result: resultByDecision[vendorResult.decision],
     risk_score: vendorResult.risk_score,
     vendor_reference_id: vendorResult.vendor_reference_id,
-    reasons: vendorResult.reasons
+    reasons: vendorResult.reasons,
+    vendor_session_id: vendorResult.vendor_session_id,
+    verification_url: vendorResult.verification_url,
+    vendor_status: vendorResult.status,
+    raw_response_summary: vendorResult.raw_response_summary
   };
 }
