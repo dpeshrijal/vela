@@ -15,14 +15,8 @@ export interface VerifyIdentityToolInput {
 }
 
 export const verifyIdentityInputSchema = {
-  required: [
-    "external_user_id",
-    "jurisdiction",
-    "document_type",
-    "document_front",
-    "selfie_or_liveness_session_id",
-    "idempotency_key"
-  ]
+  required: ["external_user_id", "jurisdiction", "idempotency_key"],
+  optional: ["document_type", "document_front", "selfie_or_liveness_session_id"]
 } as const;
 
 export const verifyIdentityTool: McpToolDefinition<unknown, VerifyIdentityResponse> = {
@@ -57,21 +51,17 @@ function parseVerifyIdentityInput(input: unknown): VerifyIdentityToolInput {
     getRequiredString(payload, field);
   }
 
-  const documentType = getRequiredString(payload, "document_type");
-
-  if (!isDocumentType(documentType)) {
-    throw new VelaError("Invalid field: payload.document_type");
-  }
+  const documentType = getOptionalDocumentType(payload);
 
   return {
     agent_token: input.agent_token,
     payload: {
       external_user_id: getRequiredString(payload, "external_user_id"),
       jurisdiction: getRequiredString(payload, "jurisdiction"),
+      idempotency_key: getRequiredString(payload, "idempotency_key"),
       document_type: documentType,
-      document_front: getRequiredString(payload, "document_front"),
-      selfie_or_liveness_session_id: getRequiredString(payload, "selfie_or_liveness_session_id"),
-      idempotency_key: getRequiredString(payload, "idempotency_key")
+      document_front: getOptionalString(payload, "document_front"),
+      selfie_or_liveness_session_id: getOptionalString(payload, "selfie_or_liveness_session_id")
     }
   };
 }
@@ -85,6 +75,34 @@ function getRequiredString(payload: Record<string, unknown>, field: string): str
 
   if (typeof value !== "string" || value.length === 0) {
     throw new VelaError(`Missing required field: payload.${field}`);
+  }
+
+  return value;
+}
+
+function getOptionalString(payload: Record<string, unknown>, field: string): string | undefined {
+  const value = payload[field];
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.length === 0) {
+    throw new VelaError(`Invalid field: payload.${field}`);
+  }
+
+  return value;
+}
+
+function getOptionalDocumentType(payload: Record<string, unknown>): DocumentType | undefined {
+  const value = getOptionalString(payload, "document_type");
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isDocumentType(value)) {
+    throw new VelaError("Invalid field: payload.document_type");
   }
 
   return value;

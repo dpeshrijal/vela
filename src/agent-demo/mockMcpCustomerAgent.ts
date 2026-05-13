@@ -17,9 +17,6 @@ const mcpServerUrl = process.env.MCP_SERVER_URL ?? "http://localhost:3000/mcp";
 const validPayload: VerifyIdentityRequest = {
   external_user_id: "user_mcp_approved_123",
   jurisdiction: "US",
-  document_type: "passport",
-  document_front: "mock_valid_document",
-  selfie_or_liveness_session_id: "live_passed",
   idempotency_key: "request_mcp_approved_123"
 };
 

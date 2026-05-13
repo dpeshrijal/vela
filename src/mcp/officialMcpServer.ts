@@ -20,10 +20,10 @@ export function createOfficialMcpServer(agentToken: string): McpServer {
       inputSchema: {
         external_user_id: z.string(),
         jurisdiction: z.string(),
-        document_type: z.enum(["passport", "drivers_license", "national_id"]),
-        document_front: z.string(),
-        selfie_or_liveness_session_id: z.string(),
-        idempotency_key: z.string()
+        idempotency_key: z.string(),
+        document_type: z.enum(["passport", "drivers_license", "national_id"]).optional(),
+        document_front: z.string().optional(),
+        selfie_or_liveness_session_id: z.string().optional()
       }
     },
     async (payload) => {

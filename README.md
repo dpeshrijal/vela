@@ -144,9 +144,6 @@ const verification = await client.callTool({
   arguments: {
     external_user_id: "user_approved_123",
     jurisdiction: "US",
-    document_type: "passport",
-    document_front: "mock_valid_document",
-    selfie_or_liveness_session_id: "live_passed",
     idempotency_key: "request_approved_123"
   }
 });
@@ -178,9 +175,6 @@ curl -X POST http://localhost:3000/tools/vela_compliance_verify_identity \
   -d '{
     "external_user_id": "user_approved_123",
     "jurisdiction": "US",
-    "document_type": "passport",
-    "document_front": "mock_valid_document",
-    "selfie_or_liveness_session_id": "live_passed",
     "idempotency_key": "request_approved_123"
   }'
 ```

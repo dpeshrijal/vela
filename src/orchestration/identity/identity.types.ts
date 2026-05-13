@@ -5,10 +5,10 @@ export type DocumentType = "passport" | "drivers_license" | "national_id";
 export interface VerifyIdentityRequest {
   external_user_id: string;
   jurisdiction: string;
-  document_type: DocumentType;
-  document_front: string;
-  selfie_or_liveness_session_id: string;
   idempotency_key: string;
+  document_type?: DocumentType;
+  document_front?: string;
+  selfie_or_liveness_session_id?: string;
 }
 
 export interface VerifyIdentityCommand {
