@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { appConfig } from "./config.js";
 import { VelaError } from "../common/errors.js";
 import { createMcpServer } from "../mcp/mcpServer.js";
+import { createOfficialMcpServer } from "../mcp/officialMcpServer.js";
 import { getReasoningToolName } from "../mcp/tools/getReasoning.tool.js";
 import { verifyIdentityToolName } from "../mcp/tools/verifyIdentity.tool.js";
 
@@ -37,6 +39,11 @@ async function handleRequest(
 ): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
 
+  if (url.pathname === "/mcp") {
+    await handleMcpRequest(request, response);
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/health") {
     sendJson(response, 200, {
       status: "ok",
@@ -45,6 +52,7 @@ async function handleRequest(
     return;
   }
 
+  // Debug/demo REST wrapper. The primary product interface is MCP at /mcp.
   if (request.method === "POST" && url.pathname === `/tools/${verifyIdentityToolName}`) {
     const payload = await readJsonBody(request);
     const result = await mcpServer.callTool(verifyIdentityToolName, {
@@ -56,6 +64,7 @@ async function handleRequest(
     return;
   }
 
+  // Debug/demo REST wrapper. The primary product interface is MCP at /mcp.
   if (request.method === "GET" && url.pathname.startsWith("/audit/")) {
     const reasoningLogId = decodeURIComponent(url.pathname.replace("/audit/", ""));
 
@@ -75,6 +84,16 @@ async function handleRequest(
   sendJson(response, 404, {
     error: "Route not found"
   });
+}
+
+async function handleMcpRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined
+  });
+  const mcpServer = createOfficialMcpServer(getAgentToken(request));
+
+  await mcpServer.connect(transport);
+  await transport.handleRequest(request, response);
 }
 
 function getAgentToken(request: IncomingMessage): string {

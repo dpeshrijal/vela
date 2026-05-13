@@ -7,11 +7,16 @@
   "scripts": {
     "build": "tsc --noEmit",
     "start": "tsx src/app/server.ts",
-    "demo": "tsx src/agent-demo/mockCustomerAgent.ts"
+    "demo": "tsx src/agent-demo/mockCustomerAgent.ts",
+    "demo:mcp": "tsx src/agent-demo/mockMcpCustomerAgent.ts"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
     "tsx": "^4.7.1",
     "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
   }
 }
