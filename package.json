@@ -1,0 +1,17 @@
+{
+  "name": "vela-phase1-poc",
+  "version": "0.1.0",
+  "description": "One-day proof of concept for Vela Phase 1 compliance orchestration.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "start": "tsx src/app/server.ts",
+    "demo": "tsx src/agent-demo/mockCustomerAgent.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.3"
+  }
+}
