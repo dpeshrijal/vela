@@ -6,7 +6,7 @@ import { verifyIdentityToolName } from "../mcp/tools/verifyIdentity.tool.js";
 import type { VerifyIdentityRequest, VerifyIdentityResponse } from "../orchestration/identity/identity.types.js";
 import type { ReasoningLogEntry } from "../audit/reasoningLog.types.js";
 
-const mcpServerUrl = "http://localhost:3000/mcp";
+const mcpServerUrl = process.env.MCP_SERVER_URL ?? "http://localhost:3000/mcp";
 
 const validPayload: VerifyIdentityRequest = {
   external_user_id: "user_mcp_approved_123",
@@ -18,6 +18,8 @@ const validPayload: VerifyIdentityRequest = {
 };
 
 export async function runMockMcpCustomerAgent(): Promise<void> {
+  console.log(`connecting to MCP server: ${mcpServerUrl}`);
+
   const transport = new StreamableHTTPClientTransport(new URL(mcpServerUrl), {
     requestInit: {
       headers: {
