@@ -13,6 +13,16 @@ interface DiditCreateSessionResponse {
   verification_url?: string;
 }
 
+interface DiditRetrieveSessionResponse {
+  session_id?: string;
+  vendor_data?: string;
+  status?: string;
+  decision?: string;
+  workflow_id?: string;
+  url?: string;
+  verification_url?: string;
+}
+
 interface DiditConfig {
   baseUrl: string;
   apiKey: string;
@@ -83,6 +93,57 @@ export const diditKycVendor: KycVendor = {
         vendor_data: diditSession.vendor_data,
         status: diditSession.status,
         workflow_id: diditSession.workflow_id,
+        has_verification_url: typeof verificationUrl === "string"
+      }
+    };
+  },
+
+  async getIdentityResult(verificationId): Promise<VendorKycResult> {
+    const config = getDiditConfig();
+    const response = await fetch(`${config.baseUrl}/v3/session/${encodeURIComponent(verificationId)}/decision/`, {
+      method: "GET",
+      headers: {
+        "x-api-key": config.apiKey
+      }
+    });
+
+    const responseBody = await readDiditResponse(response);
+
+    if (!response.ok) {
+      throw new VelaError(
+        `Didit session retrieval failed with HTTP ${response.status}: ${summarizeDiditError(responseBody)}`
+      );
+    }
+
+    if (!responseBody.json) {
+      throw new VelaError(
+        `Didit session retrieval returned non-JSON response with HTTP ${response.status}: ${summarizePlainText(
+          responseBody.text
+        )}`
+      );
+    }
+
+    const diditResult = parseDiditRetrieveSessionResponse(responseBody.json);
+    const vendorStatus = diditResult.status ?? diditResult.decision ?? "unknown";
+    const decision = normalizeDiditDecision(vendorStatus);
+    const verificationUrl = diditResult.url ?? diditResult.verification_url;
+
+    return {
+      vendor_reference_id: diditResult.session_id ?? verificationId,
+      decision,
+      risk_score: getRiskScoreForDecision(decision),
+      document_status: decision === "pass" ? "valid" : "unclear",
+      liveness_status: decision === "fail" ? "failed" : "passed",
+      reasons: [`Didit latest session status: ${vendorStatus}`],
+      vendor_session_id: diditResult.session_id ?? verificationId,
+      verification_url: verificationUrl,
+      status: vendorStatus,
+      raw_response_summary: {
+        session_id: diditResult.session_id,
+        vendor_data: diditResult.vendor_data,
+        status: diditResult.status,
+        decision: diditResult.decision,
+        workflow_id: diditResult.workflow_id,
         has_verification_url: typeof verificationUrl === "string"
       }
     };
@@ -193,6 +254,58 @@ function parseDiditSessionResponse(value: unknown): DiditCreateSessionResponse {
     url: getOptionalString(value, "url"),
     verification_url: getOptionalString(value, "verification_url")
   };
+}
+
+function parseDiditRetrieveSessionResponse(value: unknown): DiditRetrieveSessionResponse {
+  if (!isRecord(value)) {
+    throw new VelaError("Didit session retrieval response must be an object");
+  }
+
+  const decisionValue = value.decision;
+
+  return {
+    session_id: getOptionalString(value, "session_id"),
+    vendor_data: getOptionalString(value, "vendor_data"),
+    status: getOptionalString(value, "status"),
+    decision: typeof decisionValue === "string" ? decisionValue : getNestedStatus(decisionValue),
+    workflow_id: getOptionalString(value, "workflow_id"),
+    url: getOptionalString(value, "url"),
+    verification_url: getOptionalString(value, "verification_url")
+  };
+}
+
+function normalizeDiditDecision(status: string): "pass" | "review" | "fail" {
+  const normalizedStatus = status.trim().toLowerCase().replace(/[_-]/g, " ");
+
+  if (normalizedStatus === "approved") {
+    return "pass";
+  }
+
+  if (normalizedStatus === "declined" || normalizedStatus === "rejected") {
+    return "fail";
+  }
+
+  return "review";
+}
+
+function getRiskScoreForDecision(decision: "pass" | "review" | "fail"): number {
+  if (decision === "pass") {
+    return 28;
+  }
+
+  if (decision === "fail") {
+    return 91;
+  }
+
+  return 50;
+}
+
+function getNestedStatus(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  return getOptionalString(value, "status") ?? getOptionalString(value, "decision");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

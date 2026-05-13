@@ -16,6 +16,11 @@ export interface VerifyIdentityCommand {
   payload: VerifyIdentityRequest;
 }
 
+export interface GetIdentityResultCommand {
+  agentToken: string;
+  verificationId: string;
+}
+
 export interface NormalizedIdentityVendorResult {
   verification_id: string;
   result: IdentityVerificationResult;
@@ -38,3 +43,5 @@ export interface VerifyIdentityResponse {
   verification_url?: string;
   vendor_status?: string;
 }
+
+export type GetIdentityResultResponse = VerifyIdentityResponse;

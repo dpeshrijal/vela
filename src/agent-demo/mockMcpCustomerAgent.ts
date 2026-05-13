@@ -2,9 +2,14 @@ import "dotenv/config";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { appConfig } from "../app/config.js";
+import { getIdentityResultToolName } from "../mcp/tools/getIdentityResult.tool.js";
 import { getReasoningToolName } from "../mcp/tools/getReasoning.tool.js";
 import { verifyIdentityToolName } from "../mcp/tools/verifyIdentity.tool.js";
-import type { VerifyIdentityRequest, VerifyIdentityResponse } from "../orchestration/identity/identity.types.js";
+import type {
+  GetIdentityResultResponse,
+  VerifyIdentityRequest,
+  VerifyIdentityResponse
+} from "../orchestration/identity/identity.types.js";
 import type { ReasoningLogEntry } from "../audit/reasoningLog.types.js";
 
 const mcpServerUrl = process.env.MCP_SERVER_URL ?? "http://localhost:3000/mcp";
@@ -41,6 +46,7 @@ export async function runMockMcpCustomerAgent(): Promise<void> {
     const toolNames = toolsResponse.tools.map((tool) => tool.name);
 
     assertToolRegistered(toolNames, verifyIdentityToolName);
+    assertToolRegistered(toolNames, getIdentityResultToolName);
     assertToolRegistered(toolNames, getReasoningToolName);
 
     console.log("available MCP tools:");
@@ -54,11 +60,23 @@ export async function runMockMcpCustomerAgent(): Promise<void> {
 
     console.log("\nverification response:");
     console.log(JSON.stringify(verificationResponse, null, 2));
+    console.log(`\nverification_url: ${verificationResponse.verification_url ?? "not returned by vendor"}`);
+
+    const latestResult = await client.callTool({
+      name: getIdentityResultToolName,
+      arguments: {
+        verification_id: verificationResponse.verification_id
+      }
+    });
+    const latestResponse = parseTextJson<GetIdentityResultResponse>(latestResult);
+
+    console.log("\nlatest identity result response:");
+    console.log(JSON.stringify(latestResponse, null, 2));
 
     const reasoningResult = await client.callTool({
       name: getReasoningToolName,
       arguments: {
-        reasoning_log_id: verificationResponse.reasoning_log_id
+        reasoning_log_id: latestResponse.reasoning_log_id
       }
     });
     const reasoningResponse = parseTextJson<ReasoningLogEntry>(reasoningResult);

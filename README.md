@@ -9,8 +9,13 @@ It demonstrates how a customer agent can call Vela MCP tools to verify identity,
 ```text
 Mock customer agent
 -> vela_compliance_verify_identity
--> mock KYC vendor adapter
+-> KYC vendor adapter
 -> normalize vendor response
+-> apply demo customer policy
+-> save reasoning log
+-> vela_compliance_get_identity_result
+-> fetch latest vendor result
+-> normalize latest result
 -> apply demo customer policy
 -> save reasoning log
 -> vela_audit_get_reasoning
@@ -25,9 +30,10 @@ The primary product interface is a real MCP server exposed at:
 POST /mcp
 ```
 
-The server uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport and registers two MCP tools:
+The server uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport and registers three MCP tools:
 
 - `vela_compliance_verify_identity`
+- `vela_compliance_get_identity_result`
 - `vela_audit_get_reasoning`
 
 Demo authentication uses the `x-agent-token` HTTP header:
@@ -39,6 +45,7 @@ x-agent-token: demo_agent_token
 ## Included
 
 - MCP tool: `vela_compliance_verify_identity`
+- MCP tool: `vela_compliance_get_identity_result`
 - MCP tool: `vela_audit_get_reasoning`
 - Mock customer agent
 - Mock KYC vendor
@@ -97,7 +104,11 @@ KYC_VENDOR=didit
 
 `DIDIT_APP_ID` may be present in local environments, but the current Didit session API call does not require it.
 
-The Didit adapter currently creates a hosted verification session and returns a `review` / `manual_review` result with the Didit session ID, vendor status, and verification URL when returned by Didit. Final approval/rejection handling, webhooks, and polling are intentionally not implemented yet.
+The Didit adapter creates a hosted verification session and returns a `review` / `manual_review` result with the Didit session ID, vendor status, and verification URL when returned by Didit.
+
+Use `vela_compliance_get_identity_result` with the returned `verification_id` to fetch the latest Didit session result. Before the user completes Didit verification, the latest result will usually remain `review` / `manual_review` with a vendor status such as `Not Started`, `In Progress`, or `In Review`. When Didit returns `Approved`, Vela normalizes it to `approved` / `allowed`; when Didit returns `Declined` or `Rejected`, Vela normalizes it to `rejected` / `blocked`.
+
+Webhooks are intentionally not implemented yet.
 
 ## Run The MCP Server
 
@@ -137,6 +148,13 @@ const verification = await client.callTool({
     document_front: "mock_valid_document",
     selfie_or_liveness_session_id: "live_passed",
     idempotency_key: "request_approved_123"
+  }
+});
+
+const latestResult = await client.callTool({
+  name: "vela_compliance_get_identity_result",
+  arguments: {
+    verification_id: "<verification_id from first response>"
   }
 });
 ```

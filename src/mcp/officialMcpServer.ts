@@ -1,10 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { appConfig } from "../app/config.js";
+import { getIdentityResultToolName } from "./tools/getIdentityResult.tool.js";
 import { getReasoningTool } from "./tools/getReasoning.tool.js";
 import { verifyIdentityToolName } from "./tools/verifyIdentity.tool.js";
 import { getReasoningToolName } from "./tools/getReasoning.tool.js";
-import { verifyIdentity } from "../orchestration/identity/identityOrchestrator.js";
+import { getIdentityResult, verifyIdentity } from "../orchestration/identity/identityOrchestrator.js";
 
 export function createOfficialMcpServer(agentToken: string): McpServer {
   const server = new McpServer({
@@ -29,6 +30,31 @@ export function createOfficialMcpServer(agentToken: string): McpServer {
       const result = await verifyIdentity({
         agentToken,
         payload
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    getIdentityResultToolName,
+    {
+      description: "Fetch the latest identity verification result from the selected KYC vendor.",
+      inputSchema: {
+        verification_id: z.string()
+      }
+    },
+    async ({ verification_id }) => {
+      const result = await getIdentityResult({
+        agentToken,
+        verificationId: verification_id
       });
 
       return {
