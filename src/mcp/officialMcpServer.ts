@@ -2,10 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { appConfig } from "../app/config.js";
 import { getIdentityResultToolName } from "./tools/getIdentityResult.tool.js";
+import { getLiquidityQuoteToolName } from "./tools/getLiquidityQuote.tool.js";
 import { getReasoningTool } from "./tools/getReasoning.tool.js";
 import { verifyIdentityToolName } from "./tools/verifyIdentity.tool.js";
 import { getReasoningToolName } from "./tools/getReasoning.tool.js";
 import { getIdentityResult, verifyIdentity } from "../orchestration/identity/identityOrchestrator.js";
+import { getLiquidityQuote } from "../orchestration/liquidity/liquidityOrchestrator.js";
 
 export function createOfficialMcpServer(agentToken: string): McpServer {
   const server = new McpServer({
@@ -55,6 +57,35 @@ export function createOfficialMcpServer(agentToken: string): McpServer {
       const result = await getIdentityResult({
         agentToken,
         verificationId: verification_id
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    getLiquidityQuoteToolName,
+    {
+      description: "Create a real liquidity quote through Conduit.",
+      inputSchema: {
+        source_asset: z.string(),
+        source_amount: z.string(),
+        target_asset: z.string(),
+        target_network: z.string(),
+        idempotency_key: z.string()
+      }
+    },
+    async (payload) => {
+      const result = await getLiquidityQuote({
+        agentToken,
+        payload
       });
 
       return {

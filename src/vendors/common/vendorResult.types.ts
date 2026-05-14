@@ -12,3 +12,22 @@ export interface VendorKycResult {
   status?: string;
   raw_response_summary?: Record<string, unknown>;
 }
+
+export interface VendorLiquidityQuoteResult {
+  vendor_quote_id: string;
+  source: {
+    asset: string;
+    amount: string;
+    network?: string;
+  };
+  target: {
+    asset: string;
+    amount: string;
+    network?: string;
+  };
+  pricing_model?: string;
+  spread_bps?: number;
+  created_at: string;
+  expires_at: string;
+  raw_response_summary?: Record<string, unknown>;
+}

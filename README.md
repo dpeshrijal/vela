@@ -2,7 +2,7 @@
 
 This is a one-day proof of concept for Vela Phase 1 compliance orchestration.
 
-It demonstrates how a customer agent can call Vela MCP tools to verify identity, apply a demo policy, and retrieve the reasoning/audit trail behind the decision.
+It demonstrates how a customer agent can call Vela MCP tools to verify identity, apply a demo policy, retrieve the reasoning/audit trail behind the decision, and request a time-limited liquidity quote.
 
 ## Demo Flow
 
@@ -20,6 +20,12 @@ Mock customer agent
 -> save reasoning log
 -> vela_audit_get_reasoning
 -> return audit trail
+-> vela_liquidity_get_quote
+-> Conduit quote API
+-> normalize quote response
+-> save reasoning log
+-> vela_audit_get_reasoning
+-> return quote audit trail
 ```
 
 ## Primary Interface
@@ -30,10 +36,11 @@ The primary product interface is a real MCP server exposed at:
 POST /mcp
 ```
 
-The server uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport and registers three MCP tools:
+The server uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport and registers four MCP tools:
 
 - `vela_compliance_verify_identity`
 - `vela_compliance_get_identity_result`
+- `vela_liquidity_get_quote`
 - `vela_audit_get_reasoning`
 
 Demo authentication uses the `x-agent-token` HTTP header:
@@ -46,10 +53,12 @@ x-agent-token: demo_agent_token
 
 - MCP tool: `vela_compliance_verify_identity`
 - MCP tool: `vela_compliance_get_identity_result`
+- MCP tool: `vela_liquidity_get_quote`
 - MCP tool: `vela_audit_get_reasoning`
 - Mock customer agent
 - Mock KYC vendor
 - Didit sandbox KYC vendor adapter
+- Conduit liquidity quote adapter
 - Simple policy engine
 - In-memory reasoning/audit log
 
@@ -60,7 +69,7 @@ This POC intentionally does not include:
 - Production KYC vendor handling
 - Real sanctions or wallet screening
 - Travel Rule
-- Liquidity
+- Liquidity conversion execution
 - Payout routing
 - Database
 - Dashboard
@@ -110,6 +119,27 @@ Use `vela_compliance_get_identity_result` with the returned `verification_id` to
 
 Webhooks are intentionally not implemented yet.
 
+## Liquidity Vendor Selection
+
+The liquidity quote adapter is selected with `LIQUIDITY_VENDOR`.
+
+Use the Conduit quote API:
+
+```bash
+LIQUIDITY_VENDOR=conduit npm run demo:mcp
+```
+
+Required Conduit environment variables:
+
+```text
+LIQUIDITY_VENDOR=conduit
+CONDUIT_BASE_URL=https://api.conduit.financial
+CONDUIT_API_KEY=your_conduit_api_key
+CONDUIT_API_SECRET=your_conduit_api_secret
+```
+
+`vela_liquidity_get_quote` calls `POST /quotes` with the requested source asset, source amount, target asset, and target network. It returns Conduit's quote ID, target amount, effective rate, quote creation and expiry timestamps, and a reasoning log ID. It does not create a transaction, execute a conversion, or move funds.
+
 ## Run The MCP Server
 
 ```bash
@@ -154,6 +184,17 @@ const latestResult = await client.callTool({
     verification_id: "<verification_id from first response>"
   }
 });
+
+const quote = await client.callTool({
+  name: "vela_liquidity_get_quote",
+  arguments: {
+    source_asset: "USD",
+    source_amount: "100.00",
+    target_asset: "USDT",
+    target_network: "tron",
+    idempotency_key: "quote_123"
+  }
+});
 ```
 
 ## Debug REST Calls
@@ -179,6 +220,21 @@ curl -X POST http://localhost:3000/tools/vela_compliance_verify_identity \
   }'
 ```
 
+Get a liquidity quote:
+
+```bash
+curl -X POST http://localhost:3000/tools/vela_liquidity_get_quote \
+  -H "content-type: application/json" \
+  -H "x-agent-token: demo_agent_token" \
+  -d '{
+    "source_asset": "USD",
+    "source_amount": "100.00",
+    "target_asset": "USDT",
+    "target_network": "tron",
+    "idempotency_key": "quote_123"
+  }'
+```
+
 Retrieve the reasoning log:
 
 ```bash
@@ -198,4 +254,4 @@ curl http://localhost:3000/audit/log_1 \
 
 Vela does not perform KYC in this POC.
 
-The project simulates a third-party KYC vendor and demonstrates the orchestration layer around that vendor: request handling, vendor response normalization, customer policy evaluation, reasoning log storage, and audit retrieval.
+The project simulates or calls third-party vendors and demonstrates the orchestration layer around those vendors: request handling, vendor response normalization, customer policy evaluation where applicable, reasoning log storage, and audit retrieval. For liquidity, Vela only creates a quote through Conduit and returns the normalized quote; it does not execute a transaction or move funds.

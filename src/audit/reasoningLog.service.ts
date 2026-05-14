@@ -1,18 +1,18 @@
-import type { ReasoningLogEntry, ReasoningLogId } from "./reasoningLog.types.js";
+import type { ReasoningLogDraft, ReasoningLogEntry, ReasoningLogId } from "./reasoningLog.types.js";
 import { VelaError } from "../common/errors.js";
 
 const reasoningLogs: ReasoningLogEntry[] = [];
 
-export function saveReasoningLog(
-  entry: Omit<ReasoningLogEntry, "reasoning_log_id" | "created_at">
-): ReasoningLogId {
+export function saveReasoningLog(entry: ReasoningLogDraft): ReasoningLogId {
   const reasoning_log_id = `log_${reasoningLogs.length + 1}`;
 
-  reasoningLogs.push({
+  const reasoningLog = {
     reasoning_log_id,
     created_at: new Date().toISOString(),
     ...entry
-  });
+  } as ReasoningLogEntry;
+
+  reasoningLogs.push(reasoningLog);
 
   return reasoning_log_id;
 }

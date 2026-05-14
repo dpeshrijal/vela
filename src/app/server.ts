@@ -6,6 +6,7 @@ import { VelaError } from "../common/errors.js";
 import { createMcpServer } from "../mcp/mcpServer.js";
 import { createOfficialMcpServer } from "../mcp/officialMcpServer.js";
 import { getReasoningToolName } from "../mcp/tools/getReasoning.tool.js";
+import { getLiquidityQuoteToolName } from "../mcp/tools/getLiquidityQuote.tool.js";
 import { verifyIdentityToolName } from "../mcp/tools/verifyIdentity.tool.js";
 
 export function startServer(): void {
@@ -57,6 +58,18 @@ async function handleRequest(
   if (request.method === "POST" && url.pathname === `/tools/${verifyIdentityToolName}`) {
     const payload = await readJsonBody(request);
     const result = await mcpServer.callTool(verifyIdentityToolName, {
+      agent_token: getAgentToken(request),
+      payload
+    });
+
+    sendJson(response, 200, result);
+    return;
+  }
+
+  // Debug/demo REST wrapper. The primary product interface is MCP at /mcp.
+  if (request.method === "POST" && url.pathname === `/tools/${getLiquidityQuoteToolName}`) {
+    const payload = await readJsonBody(request);
+    const result = await mcpServer.callTool(getLiquidityQuoteToolName, {
       agent_token: getAgentToken(request),
       payload
     });
